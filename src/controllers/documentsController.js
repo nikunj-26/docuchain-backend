@@ -6,6 +6,7 @@ const {
   decryptFile,
 } = require("../utils/fileEncryption");
 const database = require("../config/database");
+const logger = require("../utils/logger");
 
 /**
  * Create a new document with IPFS and blockchain storage
@@ -58,7 +59,7 @@ const createDocument = async (req, res, next) => {
       });
     }
 
-    console.log(
+    logger.info(
       `Creating document: "${title}" (${req.file.size} bytes)`,
     );
 
@@ -84,25 +85,25 @@ const createDocument = async (req, res, next) => {
 
     // Step 5: Generate SHA256 hash of original file
     const fileHash = generateSHA256(req.file.buffer);
-    console.log(`  File hash: ${fileHash}`);
+    logger.debug(`File hash: ${fileHash}`);
 
     // Step 6: Encrypt file
-    console.log("  Encrypting file...");
+    logger.debug("Encrypting file...");
     const { encryptedFileBuffer, encryptedKeyPayload } =
       await encryptFile(req.file.buffer);
 
     // Step 7: Upload encrypted file to Pinata
-    console.log("  Uploading to IPFS...");
+    logger.debug("Uploading to IPFS...");
     const pinataResult = await pinataService.uploadFile(
       encryptedFileBuffer,
       req.file.originalname,
       { userId, title },
     );
     const cid = pinataResult.cid;
-    console.log(`  CID: ${cid}`);
+    logger.debug(`CID: ${cid}`);
 
     // Step 8: Create document on blockchain
-    console.log("  Creating on blockchain...");
+    logger.debug("Creating on blockchain...");
     const blockchainResult = await blockchainService.createDocument(
       userWalletAddress,
       title,
@@ -120,8 +121,8 @@ const createDocument = async (req, res, next) => {
       blockchainResult.documentId,
     );
     const txHash = blockchainResult.txHash;
-    console.log(`  Blockchain doc ID: ${blockchainDocumentId}`);
-    console.log(`  Transaction: ${txHash}`);
+    logger.debug(`Blockchain doc ID: ${blockchainDocumentId}`);
+    logger.debug(`Transaction: ${txHash}`);
 
     // Step 9: DATABASE TRANSACTION
     // Only commit after blockchain confirmation
@@ -149,7 +150,7 @@ const createDocument = async (req, res, next) => {
 
       await client.query("COMMIT");
 
-      console.log(`✓ Document created successfully`);
+      logger.info("Document created successfully");
 
       res.status(201).json({
         documentId,
@@ -161,7 +162,9 @@ const createDocument = async (req, res, next) => {
       try {
         await client.query("ROLLBACK");
       } catch (rollbackError) {
-        console.error("Rollback error:", rollbackError.message);
+        logger.error("Rollback error:", {
+          message: rollbackError.message,
+        });
       }
       throw dbError;
     } finally {
@@ -170,7 +173,9 @@ const createDocument = async (req, res, next) => {
       }
     }
   } catch (error) {
-    console.error("Create document error:", error.message);
+    logger.error("Create document error:", {
+      message: error.message,
+    });
 
     // Determine appropriate status code
     if (error.status) {
@@ -264,31 +269,31 @@ const addVersion = async (req, res, next) => {
       });
     }
 
-    console.log(
+    logger.info(
       `Adding version to document: "${document.title}" (${req.file.size} bytes)`,
     );
 
     // Step 6: Generate SHA256 hash of original file
     const fileHash = generateSHA256(req.file.buffer);
-    console.log(`  File hash: ${fileHash}`);
+    logger.debug(`File hash: ${fileHash}`);
 
     // Step 7: Encrypt file
-    console.log("  Encrypting file...");
+    logger.debug("Encrypting file...");
     const { encryptedFileBuffer, encryptedKeyPayload } =
       await encryptFile(req.file.buffer);
 
     // Step 8: Upload encrypted file to Pinata
-    console.log("  Uploading to IPFS...");
+    logger.debug("Uploading to IPFS...");
     const pinataResult = await pinataService.uploadFile(
       encryptedFileBuffer,
       req.file.originalname,
       { userId, documentId, title: document.title },
     );
     const cid = pinataResult.cid;
-    console.log(`  CID: ${cid}`);
+    logger.debug(`CID: ${cid}`);
 
     // Step 9: Add version on blockchain
-    console.log("  Adding version on blockchain...");
+    logger.debug("Adding version on blockchain...");
     const blockchainResult = await blockchainService.addVersion(
       blockchainDocumentId,
       cid,
@@ -296,7 +301,7 @@ const addVersion = async (req, res, next) => {
     );
 
     const txHash = blockchainResult.txHash;
-    console.log(`  Transaction: ${txHash}`);
+    logger.debug(`Transaction: ${txHash}`);
 
     // Step 10: DATABASE TRANSACTION
     // Only commit after blockchain confirmation
@@ -329,7 +334,7 @@ const addVersion = async (req, res, next) => {
 
       await client.query("COMMIT");
 
-      console.log(`✓ Version ${nextVersion} added successfully`);
+      logger.info(`Version ${nextVersion} added successfully`);
 
       res.status(201).json({
         documentId,
@@ -340,7 +345,9 @@ const addVersion = async (req, res, next) => {
       try {
         await client.query("ROLLBACK");
       } catch (rollbackError) {
-        console.error("Rollback error:", rollbackError.message);
+        logger.error("Rollback error:", {
+          message: rollbackError.message,
+        });
       }
       throw dbError;
     } finally {
@@ -349,7 +356,7 @@ const addVersion = async (req, res, next) => {
       }
     }
   } catch (error) {
-    console.error("Add version error:", error.message);
+    logger.error("Add version error:", { message: error.message });
 
     // Determine appropriate status code
     if (error.status) {
@@ -396,7 +403,7 @@ const getDocuments = async (req, res, next) => {
       documents: result.rows,
     });
   } catch (error) {
-    console.error("Get documents error:", error.message);
+    logger.error("Get documents error:", { message: error.message });
     res.status(500).json({
       error: "Failed to retrieve documents",
     });
@@ -485,7 +492,9 @@ const getDocumentById = async (req, res, next) => {
       })),
     });
   } catch (error) {
-    console.error("Get document by ID error:", error.message);
+    logger.error("Get document by ID error:", {
+      message: error.message,
+    });
     res.status(500).json({
       error: "Failed to retrieve document",
     });
@@ -558,7 +567,7 @@ const viewDocumentVersion = async (req, res, next) => {
     const { ipfs_cid, encrypted_key_payload } = versionResult.rows[0];
 
     // Retrieve encrypted file from IPFS
-    console.log(
+    logger.debug(
       `Retrieving version ${versionNumber} from IPFS (CID: ${ipfs_cid.substring(0, 10)}...)`,
     );
 
@@ -580,17 +589,16 @@ const viewDocumentVersion = async (req, res, next) => {
       const arrayBuffer = await response.arrayBuffer();
       encryptedFileBuffer = Buffer.from(arrayBuffer);
     } catch (error) {
-      console.error(
-        "Failed to retrieve file from IPFS:",
-        error.message,
-      );
+      logger.error("Failed to retrieve file from IPFS:", {
+        message: error.message,
+      });
       return res.status(500).json({
         error: "Failed to retrieve document from storage",
       });
     }
 
     // Decrypt file
-    console.log("Decrypting document...");
+    logger.debug("Decrypting document...");
     let decryptedBuffer;
     try {
       decryptedBuffer = await decryptFile(
@@ -598,7 +606,7 @@ const viewDocumentVersion = async (req, res, next) => {
         encrypted_key_payload,
       );
     } catch (error) {
-      console.error("Decryption failed:", error.message);
+      logger.error("Decryption failed:", { message: error.message });
       return res.status(500).json({
         error: "Failed to decrypt document",
       });
@@ -612,7 +620,9 @@ const viewDocumentVersion = async (req, res, next) => {
     );
     res.send(decryptedBuffer);
   } catch (error) {
-    console.error("View document version error:", error.message);
+    logger.error("View document version error:", {
+      message: error.message,
+    });
     res.status(500).json({
       error: "Failed to retrieve document",
     });

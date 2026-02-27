@@ -1,14 +1,15 @@
 const { PinataSDK } = require("pinata");
 const fs = require("fs");
 const path = require("path");
+const logger = require("../utils/logger");
 
 const pinataJwt = process.env.PINATA_JWT;
 const pinataGateway = process.env.PINATA_GATEWAY;
 
 // Validate Pinata configuration
 if (!pinataJwt || !pinataGateway) {
-  console.warn(
-    "⚠️  Pinata JWT or Gateway not configured. IPFS uploads will fail.",
+  logger.warn(
+    "Pinata JWT or Gateway not configured. IPFS uploads will fail.",
   );
 }
 
@@ -20,7 +21,9 @@ try {
     pinataGateway,
   });
 } catch (error) {
-  console.error("Failed to initialize Pinata SDK:", error.message);
+  logger.error("Failed to initialize Pinata SDK:", {
+    message: error.message,
+  });
 }
 
 /**
@@ -76,8 +79,8 @@ const uploadFile = async (fileContent, fileName, metadata = {}) => {
     // Upload to Pinata using the correct method
     const upload = await pinata.upload.public.file(file);
 
-    console.log(
-      `✓ File uploaded to IPFS: ${fileName} (CID: ${upload.cid})`,
+    logger.debug(
+      `File uploaded to IPFS: ${fileName} (CID: ${upload.cid})`,
     );
 
     return {
@@ -90,7 +93,7 @@ const uploadFile = async (fileContent, fileName, metadata = {}) => {
       gateway: `https://${pinataGateway}/ipfs/${upload.cid}`,
     };
   } catch (error) {
-    console.error("Pinata upload error:", error.message);
+    logger.error("Pinata upload error:", { message: error.message });
     throw {
       status: 400,
       message: "Failed to upload file to IPFS",

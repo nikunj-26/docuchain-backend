@@ -1,18 +1,20 @@
 require("dotenv").config();
+const logger = require("./src/utils/logger");
 
 // Global error handlers
 process.on("unhandledRejection", (reason, promise) => {
-  console.error(
-    "Unhandled Rejection at:",
-    promise,
-    "reason:",
-    reason,
-  );
+  logger.error("Unhandled Rejection:", {
+    reason: reason,
+    promise: promise,
+  });
   process.exit(1);
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  logger.error("Uncaught Exception:", {
+    message: error.message,
+    stack: error.stack,
+  });
   process.exit(1);
 });
 
@@ -28,12 +30,11 @@ const missingEnvVars = requiredEnvVars.filter(
 );
 
 if (missingEnvVars.length > 0) {
-  console.error(
-    "Missing required environment variables:",
-    missingEnvVars.join(", "),
+  logger.error(
+    `Missing required environment variables: ${missingEnvVars.join(", ")}`,
   );
-  console.error(
-    "\nPlease check your .env file or environment configuration.",
+  logger.error(
+    "Please check your .env file or environment configuration.",
   );
   process.exit(1);
 }
@@ -56,7 +57,7 @@ async function startServer() {
     const isConnected = await testConnection();
 
     if (!isConnected) {
-      console.error(
+      logger.error(
         "Failed to start server: Database connection failed",
       );
       process.exit(1);
@@ -66,12 +67,14 @@ async function startServer() {
     await verifyBlockchainConnection();
 
     app.listen(PORT, () => {
-      console.log(
+      logger.info(
         `Server running on port ${PORT} in ${NODE_ENV} mode`,
       );
     });
   } catch (error) {
-    console.error("Server startup failed:", error.message);
+    logger.error("Server startup failed:", {
+      message: error.message,
+    });
     process.exit(1);
   }
 }

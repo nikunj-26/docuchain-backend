@@ -1,4 +1,5 @@
 const { Pool } = require("pg");
+const logger = require("../utils/logger");
 
 // Validate required environment variable
 if (!process.env.DATABASE_URL) {
@@ -20,7 +21,9 @@ const pool = new Pool({
 });
 
 pool.on("error", (err) => {
-  console.error("Unexpected error on idle client", err);
+  logger.error("Unexpected error on idle client", {
+    error: err.message,
+  });
 });
 
 /**
@@ -34,7 +37,7 @@ const query = async (text, params) => {
     const result = await pool.query(text, params);
     return result;
   } catch (error) {
-    console.error("Database query error:", error);
+    logger.error("Database query error:", { message: error.message });
     throw error;
   }
 };
@@ -48,7 +51,9 @@ const getClient = async () => {
     const client = await pool.connect();
     return client;
   } catch (error) {
-    console.error("Failed to get database client:", error);
+    logger.error("Failed to get database client:", {
+      message: error.message,
+    });
     throw error;
   }
 };
@@ -60,10 +65,12 @@ const getClient = async () => {
 const testConnection = async () => {
   try {
     const result = await pool.query("SELECT NOW()");
-    console.log("✓ Database connection successful");
+    logger.info("Database connection successful");
     return true;
   } catch (error) {
-    console.error("✗ Database connection failed:", error.message);
+    logger.error("Database connection failed:", {
+      message: error.message,
+    });
     return false;
   }
 };

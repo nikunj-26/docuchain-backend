@@ -1,6 +1,7 @@
 const { ethers } = require("ethers");
 const fs = require("fs");
 const path = require("path");
+const logger = require("../utils/logger");
 
 // Load contract ABI
 const abiPath = path.join(
@@ -16,10 +17,10 @@ const contractAddress = process.env.CONTRACT_ADDRESS;
 
 // Validate configuration
 if (!rpcUrl || !privateKey || !contractAddress) {
-  console.warn(
-    "⚠️  Blockchain configuration incomplete. Smart contract operations will fail.",
+  logger.warn(
+    "Blockchain configuration incomplete. Smart contract operations will fail.",
   );
-  console.warn("Required: RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS");
+  logger.warn("Required: RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS");
 }
 
 let provider = null;
@@ -37,10 +38,9 @@ try {
     );
   }
 } catch (error) {
-  console.error(
-    "Failed to initialize blockchain service:",
-    error.message,
-  );
+  logger.error("Failed to initialize blockchain service:", {
+    message: error.message,
+  });
 }
 
 /**
@@ -90,26 +90,26 @@ const createDocument = async (owner, title, cid, fileHash) => {
       }
     }
 
-    console.log("Creating document on blockchain...");
-    console.log(`  Owner: ${owner}`);
-    console.log(`  Title: ${title}`);
-    console.log(`  CID: ${cid}`);
+    logger.debug("Creating document on blockchain...");
+    logger.debug(`  Owner: ${owner}`);
+    logger.debug(`  Title: ${title}`);
+    logger.debug(`  CID: ${cid}`);
 
     // Send transaction
     const tx = await contract.createDocument(owner, title, cid, hash);
-    console.log(`  Transaction sent: ${tx.hash}`);
+    logger.debug(`  Transaction sent: ${tx.hash}`);
 
     // Wait for confirmation
-    console.log("  Waiting for confirmation...");
+    logger.debug("  Waiting for confirmation...");
     const receipt = await tx.wait();
 
     if (!receipt || receipt.status === 0) {
       throw new Error("Transaction failed");
     }
 
-    console.log(`✓ Document created successfully`);
-    console.log(`  Block: ${receipt.blockNumber}`);
-    console.log(`  Gas used: ${receipt.gasUsed.toString()}`);
+    logger.info("Document created successfully");
+    logger.debug(`  Block: ${receipt.blockNumber}`);
+    logger.debug(`  Gas used: ${receipt.gasUsed.toString()}`);
 
     // Parse DocumentCreated event from logs
     let documentId = null;
@@ -123,7 +123,7 @@ const createDocument = async (owner, title, cid, fileHash) => {
       documentCreatedEvent.name === "DocumentCreated"
     ) {
       documentId = documentCreatedEvent.args.documentId.toString();
-      console.log(`  Document ID: ${documentId}`);
+      logger.debug(`  Document ID: ${documentId}`);
     }
 
     return {
@@ -134,7 +134,9 @@ const createDocument = async (owner, title, cid, fileHash) => {
       status: receipt.status === 1 ? "success" : "failed",
     };
   } catch (error) {
-    console.error("Create document error:", error.message);
+    logger.error("Create document error:", {
+      message: error.message,
+    });
     throw {
       status: 400,
       message: "Failed to create document on blockchain",
@@ -184,25 +186,25 @@ const addVersion = async (documentId, cid, fileHash) => {
       }
     }
 
-    console.log("Adding version to document on blockchain...");
-    console.log(`  Document ID: ${documentId}`);
-    console.log(`  CID: ${cid}`);
+    logger.debug("Adding version to document on blockchain...");
+    logger.debug(`  Document ID: ${documentId}`);
+    logger.debug(`  CID: ${cid}`);
 
     // Send transaction
     const tx = await contract.addVersion(documentId, cid, hash);
-    console.log(`  Transaction sent: ${tx.hash}`);
+    logger.debug(`  Transaction sent: ${tx.hash}`);
 
     // Wait for confirmation
-    console.log("  Waiting for confirmation...");
+    logger.debug("  Waiting for confirmation...");
     const receipt = await tx.wait();
 
     if (!receipt || receipt.status === 0) {
       throw new Error("Transaction failed");
     }
 
-    console.log(`✓ Version added successfully`);
-    console.log(`  Block: ${receipt.blockNumber}`);
-    console.log(`  Gas used: ${receipt.gasUsed.toString()}`);
+    logger.info("Version added successfully");
+    logger.debug(`  Block: ${receipt.blockNumber}`);
+    logger.debug(`  Gas used: ${receipt.gasUsed.toString()}`);
 
     return {
       txHash: tx.hash,
@@ -211,7 +213,7 @@ const addVersion = async (documentId, cid, fileHash) => {
       status: receipt.status === 1 ? "success" : "failed",
     };
   } catch (error) {
-    console.error("Add version error:", error.message);
+    logger.error("Add version error:", { message: error.message });
     throw {
       status: 400,
       message: "Failed to add version on blockchain",
@@ -239,7 +241,7 @@ const getDocument = async (documentId) => {
       versionCount: doc.versionCount.toString(),
     };
   } catch (error) {
-    console.error("Get document error:", error.message);
+    logger.error("Get document error:", { message: error.message });
     throw {
       status: 400,
       message: "Failed to get document from blockchain",
@@ -255,9 +257,9 @@ const getDocument = async (documentId) => {
 const verifyBlockchainConnection = async () => {
   try {
     if (!rpcUrl || !privateKey || !contractAddress) {
-      console.error("✗ Blockchain configuration incomplete");
-      console.error(
-        "  Required: RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS",
+      logger.error("Blockchain configuration incomplete");
+      logger.error(
+        "Required: RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS",
       );
       process.exit(1);
     }
@@ -278,14 +280,14 @@ const verifyBlockchainConnection = async () => {
     // Call read-only function to verify contract is callable
     const documentCounter = await testContract.documentCounter();
 
-    console.log(
-      `✓ Blockchain connection successful (Chain: ${chainId}, Documents: ${documentCounter})`,
+    logger.info(
+      `Blockchain connection successful (Chain: ${chainId}, Documents: ${documentCounter})`,
     );
   } catch (error) {
-    console.error("✗ Blockchain initialization failed");
-    console.error(`  Error: ${error.message}`);
+    logger.error("Blockchain initialization failed");
+    logger.error(`Error: ${error.message}`);
     if (error.code) {
-      console.error(`  Code: ${error.code}`);
+      logger.error(`Code: ${error.code}`);
     }
     process.exit(1);
   }

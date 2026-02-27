@@ -2,6 +2,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { pool } = require("../config/database");
+const logger = require("../utils/logger");
 
 const initializeDatabase = async () => {
   try {
@@ -9,10 +10,12 @@ const initializeDatabase = async () => {
     const schema = fs.readFileSync(schemaPath, "utf8");
 
     await pool.query(schema);
-    console.log("✓ Database schema initialized successfully");
+    logger.info("Database schema initialized successfully");
     process.exit(0);
   } catch (error) {
-    console.error("✗ Failed to initialize database:", error.message);
+    logger.error("Failed to initialize database:", {
+      message: error.message,
+    });
     process.exit(1);
   }
 };

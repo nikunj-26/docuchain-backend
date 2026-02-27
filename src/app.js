@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const logger = require("./utils/logger");
+const requestLogger = require("./middleware/requestLogger");
 
 const healthRoutes = require("./routes/health");
 const authRoutes = require("./routes/auth");
@@ -22,6 +24,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(requestLogger);
 
 // Routes
 app.use(healthRoutes);
@@ -31,10 +34,19 @@ app.use("/", documentsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Log error with stack trace
+  logger.error("Error:", {
+    message: err.message,
+    stack: err.stack,
+    status: err.status,
+  });
+
+  // Send sanitized error to client
   res.status(err.status || 500).json({
     error: {
-      message: err.message || "Internal Server Error",
+      message: isProduction ? "Internal Server Error" : err.message,
       status: err.status || 500,
     },
   });

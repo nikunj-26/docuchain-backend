@@ -1,5 +1,6 @@
 const { ethers } = require("ethers");
 const { query } = require("../config/database");
+const logger = require("../utils/logger");
 
 const NONCE_EXPIRY_MINUTES = 10;
 const NONCE_LENGTH = 32;
@@ -34,7 +35,9 @@ const createNonce = async (walletAddress) => {
     );
     return nonce;
   } catch (error) {
-    console.error("Failed to create nonce:", error);
+    logger.error("Failed to create nonce:", {
+      message: error.message,
+    });
     throw error;
   }
 };
@@ -69,7 +72,9 @@ const verifySignature = async (walletAddress, message, signature) => {
       recoveredAddress.toLowerCase() === walletAddress.toLowerCase()
     );
   } catch (error) {
-    console.error("Signature verification failed:", error);
+    logger.error("Signature verification failed:", {
+      message: error.message,
+    });
     return false;
   }
 };
