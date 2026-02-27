@@ -1,11 +1,19 @@
 const { Pool } = require("pg");
 
+// Validate required environment variable
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is not set in environment variables.\n" +
+      "For local development: DATABASE_URL=postgresql://user:password@localhost:5432/dbname\n" +
+      "For production (Supabase): Use the connection string from Supabase dashboard",
+  );
+}
+
+const isProduction = process.env.NODE_ENV === "production";
+
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  connectionString: process.env.DATABASE_URL,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

@@ -2,6 +2,14 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { query } = require("../config/database");
 
+// Validate JWT_SECRET
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET is not set in environment variables. " +
+      "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+  );
+}
+
 const SALT_ROUNDS = 10;
 const JWT_EXPIRES_IN = "1h";
 const JWT_SECRET = process.env.JWT_SECRET;
